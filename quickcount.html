@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quick Count - SD IT AL-IQRA</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .glass-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col justify-between">
+
+  <!-- Header -->
+  <header class="bg-emerald-700 text-white shadow-lg">
+    <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="bg-white p-2 rounded-full text-emerald-700 font-bold w-10 h-10 flex items-center justify-center shadow">
+          <i class="fa-solid fa-chart-pie"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg leading-tight">SD IT AL-IQRA</h1>
+          <p class="text-xs text-emerald-100">Quick Count Pemilihan Ketua Komite</p>
+        </div>
+      </div>
+      <a href="index.html" class="px-3 py-1.5 rounded-lg bg-emerald-800 text-white text-xs font-medium hover:bg-emerald-600 transition flex items-center space-x-1">
+        <i class="fa-solid fa-arrow-left"></i>
+        <span>Ke Halaman Voting</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <main class="max-w-4xl mx-auto px-4 py-6 flex-grow w-full space-y-6">
+
+    <!-- Total Suara masuk Banner -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="glass-card p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <p class="text-xs font-semibold text-slate-500 uppercase">Total Suara Masuk</p>
+          <h2 class="text-3xl font-extrabold text-emerald-700 mt-1" id="total-votes">0</h2>
+        </div>
+        <div class="bg-emerald-100 text-emerald-700 p-3 rounded-xl">
+          <i class="fa-solid fa-box-archive text-2xl"></i>
+        </div>
+      </div>
+
+      <div class="glass-card p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <p class="text-xs font-semibold text-slate-500 uppercase">Status Pembaruan</p>
+          <div class="flex items-center space-x-2 mt-2">
+            <span class="flex h-3 w-3 relative">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            </span>
+            <span class="text-xs font-medium text-slate-700">Auto Refresh (5s)</span>
+          </div>
+        </div>
+        <button onclick="fetchQuickCount()" class="p-3 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 transition">
+          <i class="fa-solid fa-rotate text-xl"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Grafik Perolehan Suara -->
+    <div class="glass-card p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+      <h3 class="font-bold text-slate-800 text-base border-b pb-3">Perolehan Suara Calon</h3>
+      
+      <!-- Loading State -->
+      <div id="loading" class="text-center py-8">
+        <i class="fa-solid fa-circle-notch fa-spin text-3xl text-emerald-600"></i>
+        <p class="text-xs text-slate-500 mt-2">Memuat data perolehan suara...</p>
+      </div>
+
+      <!-- Container Perolehan Suara -->
+      <div id="results-container" class="space-y-6 hidden">
+        <!-- Render via JS -->
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
+    &copy; 2026 Panitia Pemilihan Komite SD IT AL-IQRA. All rights reserved.
+  </footer>
+
+  <script>
+    // URL Web App Google Apps Script Anda
+    const GAS_URL = "https://script.google.com/macros/s/AKfycby-zBMoFADLVEqANyX82sajEfH0Cu9tHo6xpvPPGO8Gut-m_7in3sOnAIr0ouuSH1I/exec";
+
+    async function fetchQuickCount() {
+      try {
+        const response = await fetch(`${GAS_URL}?action=getInitialData`);
+        const data = await response.json();
+
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('results-container').classList.remove('hidden');
+
+        renderResults(data.candidates || []);
+      } catch (error) {
+        console.error("Gagal mengambil data:", error);
+      }
+    }
+
+    function renderResults(candidates) {
+      const container = document.getElementById('results-container');
+      container.innerHTML = "";
+
+      // Hitung Total Suara Masuk
+      const totalVotes = candidates.reduce((sum, c) => sum + parseInt(c.jumlahSuara || 0), 0);
+      document.getElementById('total-votes').innerText = totalVotes + " Suara";
+
+      if (candidates.length === 0) {
+        container.innerHTML = `<p class="text-center text-slate-500 text-xs py-4">Belum ada data calon.</p>`;
+        return;
+      }
+
+      // Urutkan calon berdasarkan perolehan suara terbanyak
+      candidates.sort((a, b) => parseInt(b.jumlahSuara || 0) - parseInt(a.jumlahSuara || 0));
+
+      candidates.forEach((c, index) => {
+        const votes = parseInt(c.jumlahSuara || 0);
+        const percentage = totalVotes > 0 ? ((votes / totalVotes) * 100).toFixed(1) : 0;
+
+        const isLeading = index === 0 && votes > 0;
+
+        const card = document.createElement('div');
+        card.className = "space-y-2";
+        card.innerHTML = `
+          <div class="flex items-center justify-between text-xs">
+            <div class="flex items-center space-x-3">
+              <img src="${c.fotoUrl}" class="w-10 h-10 rounded-full object-cover border-2 ${isLeading ? 'border-amber-400' : 'border-slate-300'}">
+              <div>
+                <p class="font-bold text-slate-800 text-sm flex items-center space-x-1">
+                  <span>${c.nama}</span>
+                  ${isLeading ? '<i class="fa-solid fa-crown text-amber-500 ml-1"></i>' : ''}
+                </p>
+                <p class="text-slate-500 text-[11px]">Siswa: ${c.namaAnak} (${c.kelas})</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="font-bold text-slate-800 text-sm">${votes} Suara</span>
+              <span class="text-slate-500 block text-[11px] font-semibold text-emerald-700">${percentage}%</span>
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden border border-slate-200">
+            <div class="bg-emerald-600 h-3 rounded-full transition-all duration-700 ease-out" style="width: ${percentage}%"></div>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    // Inisialisasi awal & Auto refresh tiap 5 detik
+    fetchQuickCount();
+    setInterval(fetchQuickCount, 5000);
+  </script>
+</body>
+</html>

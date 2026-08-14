@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pemilihan Komite Sekolah - SD IT AL-IQRA</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- HTML5 QR Code Scanner Library -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    .glass-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+    }
+    .btn-spinner {
+      animation: spin 1s linear infinite;
+      display: none;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    #reader video {
+      border-radius: 0.75rem;
+      object-fit: cover;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col justify-between">
+
+  <!-- Header / Navbar -->
+  <header class="bg-emerald-700 text-white shadow-lg sticky top-0 z-50">
+    <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="bg-white p-2 rounded-full text-emerald-700 font-bold w-10 h-10 flex items-center justify-center shadow">
+          <i class="fa-solid me-0.5 fa-school"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg leading-tight">SD IT AL-IQRA</h1>
+          <p class="text-xs text-emerald-100">Pemilihan Ketua Komite Sekolah</p>
+        </div>
+      </div>
+      <nav class="flex space-x-2 text-sm">
+        <button onclick="switchTab('voting')" id="btn-voting" class="px-3 py-1.5 rounded-lg bg-emerald-800 text-white font-medium hover:bg-emerald-600 transition">Voting</button>
+        <button onclick="switchTab('daftar')" id="btn-daftar" class="px-3 py-1.5 rounded-lg text-emerald-100 font-medium hover:bg-emerald-600 hover:text-white transition">Pendaftaran</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Content Container -->
+  <main class="max-w-4xl mx-auto px-4 py-6 flex-grow w-full">
+
+    <!-- Loading Screen Utama -->
+    <div id="loading" class="text-center py-12">
+      <i class="fa-solid fa-circle-notch fa-spin text-4xl text-emerald-600"></i>
+      <p class="mt-3 text-slate-500 text-sm">Memuat data sistem...</p>
+    </div>
+
+    <!-- TAB 1: PEMILIHAN (VOTING) -->
+    <section id="tab-voting" class="hidden space-y-6">
+      <!-- Banner Status -->
+      <div id="status-voting-banner" class="p-4 rounded-xl shadow-sm border border-emerald-200 bg-emerald-50 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <span class="flex h-3 w-3 relative">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+          </span>
+          <p class="text-sm font-semibold text-emerald-800" id="voting-status-text">Voting Sedang Dibuka</p>
+        </div>
+        <span class="text-xs text-slate-500">Pilih 1 Calon Favorit Anda</span>
+      </div>
+
+      <!-- List Calon -->
+      <div id="candidate-list" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+    </section>
+
+    <!-- TAB 2: PENDAFTARAN CALON -->
+    <section id="tab-daftar" class="hidden max-w-xl mx-auto">
+      <div class="glass-card p-6 rounded-2xl shadow-sm border border-slate-200">
+        <div class="mb-6">
+          <h2 class="text-xl font-bold text-slate-800">Formulir Pendaftaran Calon</h2>
+          <p class="text-xs text-slate-500 mt-1">Daftarkan diri Anda sebagai calon Ketua Komite SD IT AL-IQRA</p>
+        </div>
+
+        <form id="form-pendaftaran" onsubmit="handleRegistration(event)" class="space-y-4">
+          <!-- Area Upload Foto -->
+          <div class="flex flex-col items-center space-y-3 p-4 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50">
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Foto Profil Calon</label>
+            <img id="foto-preview" src="https://via.placeholder.com/150?text=No+Image" alt="Preview Foto" class="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md">
+            
+            <input type="file" id="reg-foto-file" accept="image/jpeg, image/png" class="hidden" onchange="handleFileSelected(this)">
+            
+            <button type="button" onclick="document.getElementById('reg-foto-file').click()" id="btn-upload-visual" class="px-4 py-2 bg-white border border-slate-300 rounded-full text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm flex items-center space-x-2">
+              <i class="fa-solid fa-cloud-arrow-up text-emerald-600"></i>
+              <span>Pilih & Upload Foto</span>
+              <i class="fa-solid fa-circle-notch btn-spinner text-emerald-600" id="upload-spinner"></i>
+            </button>
+            
+            <p class="text-[10px] text-slate-400 text-center">Format: JPG/PNG, Maks. 2MB. Foto langsung diupload ke Google Drive.</p>
+            <input type="hidden" id="reg-foto-url" required>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Lengkap Orang Tua / Wali</label>
+            <input type="text" id="reg-nama" required class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Contoh: Ahmad Subagja, S.T.">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Ananda/Siswa</label>
+              <input type="text" id="reg-anak" required class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Nama Siswa">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Kelas</label>
+              <input type="text" id="reg-kelas" required class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Contoh: 4 - Al Farabi">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Visi & Misi Ringkas</label>
+            <textarea id="reg-visi" rows="4" required class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Tuliskan program kerja unggulan & visi Anda..."></textarea>
+          </div>
+          <button type="submit" id="btn-submit-reg" class="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-semibold text-sm transition shadow">Kirim Pendaftaran</button>
+        </form>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL VOTE DENGAN CAMERA SCANNER -->
+  <div id="vote-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+    <div class="bg-white max-w-sm w-full rounded-2xl p-6 shadow-xl space-y-4 text-center">
+      <div>
+        <h3 class="font-bold text-lg text-slate-800">Scan QR Code Pemilih</h3>
+        <p class="text-xs text-slate-500 mt-1">
+          Arahkan QR Code Kartu Akses ke kamera untuk memilih <br><span id="modal-candidate-name" class="font-bold text-emerald-700"></span>
+        </p>
+      </div>
+
+      <!-- Video Stream Kamera -->
+      <div class="relative bg-slate-900 rounded-xl overflow-hidden border-2 border-emerald-500 shadow-inner min-h-[220px] flex items-center justify-center">
+        <div id="reader" class="w-full h-full"></div>
+        <div id="scan-status" class="absolute bottom-2 left-0 right-0 text-[11px] text-white bg-black/70 py-1.5 px-2 mx-4 rounded-lg hidden font-medium">
+          Meverifikasi QR...
+        </div>
+      </div>
+
+      <button onclick="closeVoteModal()" class="w-full py-2 border border-slate-300 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition">
+        Batal
+      </button>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
+    &copy; 2026 Panitia Pemilihan Komite SD IT AL-IQRA. All rights reserved.
+  </footer>
+
+  <!-- Script Client Side -->
+  <script>
+    // URL WEB APP GAS ANDA
+    const GAS_URL = "https://script.google.com/macros/s/AKfycby-zBMoFADLVEqANyX82sajEfH0Cu9tHo6xpvPPGO8Gut-m_7in3sOnAIr0ouuSH1I/exec"; 
+
+    let selectedCandidateId = null;
+    let candidatesData = [];
+    let html5QrCode = null;
+    let isScanningActive = false;
+
+    // --- UPLOAD FOTO PROFIL ---
+    async function handleFileSelected(input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      if (file.size > 2 * 1024 * 1024) {
+        alert("Ukuran file terlalu besar. Maksimal 2MB.");
+        input.value = "";
+        return;
+      }
+
+      const spinner = document.getElementById('upload-spinner');
+      const uploadBtn = document.getElementById('btn-upload-visual');
+      const submitBtn = document.getElementById('btn-submit-reg');
+      
+      spinner.style.display = 'inline-block';
+      uploadBtn.disabled = true;
+      submitBtn.disabled = true;
+      uploadBtn.classList.add('opacity-70');
+
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        document.getElementById('foto-preview').src = e.target.result;
+
+        const payload = {
+          action: "uploadFotoToDrive",
+          fileName: "Foto_Calon_" + new Date().getTime() + "_" + file.name,
+          fileType: file.type,
+          fileBase64: e.target.result
+        };
+
+        try {
+          const response = await fetch(GAS_URL, {
+            method: "POST",
+            body: JSON.stringify(payload)
+          });
+          const result = await response.json();
+
+          if(result.success) {
+            document.getElementById('reg-foto-url').value = result.fileUrl;
+            document.getElementById('foto-preview').src = result.fileUrl; 
+            
+            uploadBtn.innerHTML = `<i class="fa-solid fa-check-circle text-emerald-600"></i> <span>Foto Siap</span>`;
+            uploadBtn.classList.remove('border-slate-300', 'hover:bg-slate-50');
+            uploadBtn.classList.add('border-emerald-500', 'bg-emerald-50');
+          } else {
+            alert("Gagal upload foto: " + result.message);
+            resetUploadUI();
+          }
+        } catch (error) {
+          alert("Terjadi kesalahan koneksi saat upload foto.");
+          resetUploadUI();
+        } finally {
+          spinner.style.display = 'none';
+          submitBtn.disabled = false;
+          uploadBtn.classList.remove('opacity-70');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function resetUploadUI() {
+      document.getElementById('reg-foto-file').value = "";
+      document.getElementById('reg-foto-url').value = "";
+      document.getElementById('foto-preview').src = "https://via.placeholder.com/150?text=No+Image";
+      const uploadBtn = document.getElementById('btn-upload-visual');
+      uploadBtn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up text-emerald-600"></i> <span>Pilih & Upload Foto</span> <i class="fa-solid fa-circle-notch btn-spinner text-emerald-600" id="upload-spinner"></i>`;
+      uploadBtn.disabled = false;
+      uploadBtn.classList.remove('border-emerald-500', 'bg-emerald-50');
+      uploadBtn.classList.add('border-slate-300', 'hover:bg-slate-50');
+    }
+
+    // --- LOAD DATA SISTEM ---
+    async function loadData() {
+      try {
+        const response = await fetch(`${GAS_URL}?action=getInitialData`);
+        const result = await response.json();
+        
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('tab-voting').classList.remove('hidden');
+
+        if(result.statusVoting !== "BUKA") {
+          document.getElementById('status-voting-banner').className = "p-4 rounded-xl shadow-sm border border-rose-200 bg-rose-50 flex items-center justify-between";
+          document.getElementById('voting-status-text').innerText = "Voting Sedang Ditutup";
+          document.getElementById('voting-status-text').className = "text-sm font-semibold text-rose-800";
+        }
+
+        candidatesData = result.candidates || [];
+        renderCandidates(candidatesData, result.statusVoting === "BUKA");
+
+      } catch (err) {
+        alert("Gagal memuat data. Pastikan URL Apps Script diatur dengan benar.");
+      }
+    }
+
+    function renderCandidates(candidates, isVotingOpen) {
+      const container = document.getElementById('candidate-list');
+      container.innerHTML = "";
+
+      if(candidates.length === 0) {
+        container.innerHTML = `<p class="text-center text-slate-500 text-sm col-span-2 py-8">Belum ada calon yang terdaftar.</p>`;
+        return;
+      }
+
+      candidates.forEach(c => {
+        const card = document.createElement('div');
+        card.className = "glass-card border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between";
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center space-x-4 mb-4">
+              <img src="${c.fotoUrl}" alt="${c.nama}" class="w-16 h-16 rounded-full object-cover border-2 border-emerald-500 shadow-sm">
+              <div>
+                <h3 class="font-bold text-slate-800 text-base">${c.nama}</h3>
+                <p class="text-xs text-slate-500">Orang Tua dari <strong>${c.namaAnak}</strong> (${c.kelas})</p>
+              </div>
+            </div>
+            <div class="bg-slate-50 p-3 rounded-lg text-xs text-slate-600 mb-4 whitespace-pre-line border border-slate-100">
+              <span class="font-semibold text-slate-700 block mb-1">Visi & Misi:</span>
+              ${c.visiMisi}
+            </div>
+          </div>
+          <button 
+            onclick="openVoteModal('${c.id}', '${c.nama}')" 
+            ${!isVotingOpen ? 'disabled' : ''} 
+            class="w-full py-2.5 ${isVotingOpen ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm' : 'bg-slate-300 text-slate-500 cursor-not-allowed'} rounded-lg font-semibold text-xs transition flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-qrcode text-sm"></i>
+            <span>${isVotingOpen ? 'Scan QR & Pilih Calon Ini' : 'Voting Ditutup'}</span>
+          </button>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function switchTab(tab) {
+      if(tab === 'voting') {
+        document.getElementById('tab-voting').classList.remove('hidden');
+        document.getElementById('tab-daftar').classList.add('hidden');
+        document.getElementById('btn-voting').className = "px-3 py-1.5 rounded-lg bg-emerald-800 text-white font-medium";
+        document.getElementById('btn-daftar').className = "px-3 py-1.5 rounded-lg text-emerald-100 font-medium hover:bg-emerald-600";
+      } else {
+        document.getElementById('tab-voting').classList.add('hidden');
+        document.getElementById('tab-daftar').classList.remove('hidden');
+        document.getElementById('btn-daftar').className = "px-3 py-1.5 rounded-lg bg-emerald-800 text-white font-medium";
+        document.getElementById('btn-voting').className = "px-3 py-1.5 rounded-lg text-emerald-100 font-medium hover:bg-emerald-600";
+      }
+    }
+
+    // --- PROSES VOTING SCAN QR ---
+    function openVoteModal(id, name) {
+      selectedCandidateId = id;
+      isScanningActive = false;
+      document.getElementById('modal-candidate-name').innerText = name;
+      document.getElementById('vote-modal').classList.remove('hidden');
+
+      startScanner();
+    }
+
+    function startScanner() {
+      html5QrCode = new Html5Qrcode("reader");
+      const config = { fps: 15, qrbox: { width: 200, height: 200 } };
+
+      html5QrCode.start(
+        { facingMode: "environment" },
+        config,
+        (decodedText) => {
+          if (isScanningActive) return;
+          isScanningActive = true;
+
+          const statusEl = document.getElementById('scan-status');
+          statusEl.innerText = "QR Terdeteksi! Memproses Suara...";
+          statusEl.classList.remove('hidden');
+
+          // Langsung kirim suara tanpa perlu ketik/pencet tombol lagi
+          sendVote(decodedText.trim());
+        },
+        (error) => { /* scanning */ }
+      ).catch(err => {
+        alert("Gagal membuka kamera HP. Pastikan Anda mengizinkan akses kamera pada browser.");
+      });
+    }
+
+    function closeVoteModal() {
+      document.getElementById('vote-modal').classList.add('hidden');
+      document.getElementById('scan-status').classList.add('hidden');
+      
+      stopScanner();
+    }
+
+    function stopScanner() {
+      if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+          html5QrCode.clear();
+          html5QrCode = null;
+        }).catch(err => console.log(err));
+      }
+    }
+
+    async function sendVote(kodeAkses) {
+      try {
+        const response = await fetch(GAS_URL, {
+          method: "POST",
+          body: JSON.stringify({
+            action: "submitVote",
+            candidateId: selectedCandidateId,
+            kodeAkses: kodeAkses
+          })
+        });
+
+        const res = await response.json();
+        alert(res.message);
+        
+        if(res.success) {
+          closeVoteModal();
+          loadData();
+        } else {
+          isScanningActive = false;
+          document.getElementById('scan-status').classList.add('hidden');
+        }
+      } catch (err) {
+        alert("Terjadi kesalahan jaringan saat menyimpan suara.");
+        isScanningActive = false;
+        document.getElementById('scan-status').classList.add('hidden');
+      }
+    }
+
+    // --- PENDAFTARAN CALON ---
+    async function handleRegistration(e) {
+      e.preventDefault();
+
+      const fotoUrl = document.getElementById('reg-foto-url').value;
+      if(!fotoUrl) {
+        alert("Harap upload foto profil terlebih dahulu.");
+        return;
+      }
+
+      const btn = document.getElementById('btn-submit-reg');
+      btn.innerText = "Mengirim...";
+      btn.disabled = true;
+
+      const payload = {
+        action: "registerCandidate",
+        nama: document.getElementById('reg-nama').value,
+        namaAnak: document.getElementById('reg-anak').value,
+        kelas: document.getElementById('reg-kelas').value,
+        visiMisi: document.getElementById('reg-visi').value,
+        fotoUrl: fotoUrl
+      };
+
+      try {
+        const response = await fetch(GAS_URL, {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+
+        const res = await response.json();
+        alert(res.message);
+        if(res.success) {
+          document.getElementById('form-pendaftaran').reset();
+          resetUploadUI();
+          switchTab('voting');
+          loadData();
+        }
+      } catch (err) {
+        alert("Terjadi kesalahan saat pendaftaran.");
+      } finally {
+        btn.innerText = "Kirim Pendaftaran";
+        btn.disabled = false;
+      }
+    }
+
+    window.onload = loadData;
+  </script>
+</body>
+</html>
